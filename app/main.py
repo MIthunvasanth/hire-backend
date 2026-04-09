@@ -33,7 +33,7 @@ if sys.platform.startswith("win"):
 	# Playwright launches a browser subprocess and requires Proactor loop on Windows.
 	asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
-app = FastAPI(title="Hire Backend")
+app = FastAPI(title="urselected Backend")
 logger = logging.getLogger(__name__)
 
 

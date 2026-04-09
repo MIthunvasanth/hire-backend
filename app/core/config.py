@@ -9,7 +9,10 @@ class Settings(BaseSettings):
     mongo_url: str = Field(default="mongodb://localhost:27017", alias="MONGO_URI")
     redis_url: str = Field(default="redis://localhost:6379", alias="REDIS_URL")
     mongo_db_name: str = Field(default="career_ai", alias="MONGO_DB")
-    cors_origins: str = Field(default="http://localhost:8080,http://127.0.0.1:8080", alias="CORS_ORIGINS")
+    cors_origins: str = Field(
+        default="http://localhost:8080,http://127.0.0.1:8080,https://urselected.netlify.app",
+        alias="CORS_ORIGINS",
+    )
     openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
     openai_resume_model: str = Field(default="gpt-4.1-mini", alias="OPENAI_RESUME_MODEL")
     openai_gap_model: str = Field(default="gpt-4.1-mini", alias="OPENAI_GAP_MODEL")
