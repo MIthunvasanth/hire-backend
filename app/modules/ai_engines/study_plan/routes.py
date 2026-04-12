@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 
 from . import service
-from .schema import StudyPlanGenerateRequest, StudyPlanHistoryResponse, StudyPlanResponse, StudyPlanTaskUpdateRequest
+from .schema import StudyPlanGenerateRequest, StudyPlanHistoryResponse, StudyPlanResponse, StudyPlanTaskUpdateRequest, StudyReferenceResponse
 
 router = APIRouter(prefix="/ai/study-plan", tags=["AI Study Plan"])
 
@@ -31,6 +31,19 @@ async def list_study_plans(
 
     plans = await service.list_study_plans_service(user_id=user_id, user_email=user_email, limit=limit)
     return StudyPlanHistoryResponse(plans=plans)
+
+
+@router.get("/references", response_model=StudyReferenceResponse)
+async def get_study_references(
+    query: str = Query(..., min_length=2),
+    limit: int = Query(default=6, ge=1, le=12),
+):
+    try:
+        return await service.get_study_references_service(query=query, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Reference search failed: {exc}") from exc
 
 
 @router.patch("/{plan_id}/task/{task_id}")

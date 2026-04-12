@@ -1,6 +1,9 @@
+import asyncio
 import json
+from urllib.parse import parse_qs, urlparse
 from datetime import datetime, timezone
 
+import httpx
 from openai import AsyncOpenAI
 from openai import OpenAIError
 
@@ -9,7 +12,7 @@ from app.modules.ai_engines.gap_analysis import repository as gap_repository
 from app.utils.helpers import normalize_mongo_doc
 
 from . import repository
-from .schema import StudyDayPlan, StudyModuleTest, StudyPlanResponse, StudySubModule, StudyTask
+from .schema import StudyDayPlan, StudyModuleTest, StudyPlanResponse, StudyReferenceItem, StudyReferenceResponse, StudySubModule, StudyTask
 
 
 def _safe_json_loads(content: str) -> dict:
@@ -21,6 +24,110 @@ def _safe_json_loads(content: str) -> dict:
 
     payload = json.loads(cleaned)
     return payload if isinstance(payload, dict) else {}
+
+
+def _extract_youtube_embed_url(raw_url: str | None) -> str | None:
+    if not raw_url:
+        return None
+
+    parsed = urlparse(raw_url)
+    host = parsed.netloc.lower()
+    if "youtube.com" in host:
+        video_id = parse_qs(parsed.query).get("v", [None])[0]
+        if video_id:
+            return f"https://www.youtube.com/embed/{video_id}"
+        if parsed.path.startswith("/embed/"):
+            return raw_url
+    if "youtu.be" in host:
+        video_id = parsed.path.strip("/")
+        if video_id:
+            return f"https://www.youtube.com/embed/{video_id}"
+    return None
+
+
+def _map_reference_item(item: dict) -> StudyReferenceItem | None:
+    if not isinstance(item, dict):
+        return None
+
+    url = str(item.get("url") or item.get("img_src") or "").strip()
+    title = str(item.get("title") or item.get("pretty_url") or "").strip()
+    if not url or not title:
+        return None
+
+    thumbnail_url = (
+        str(item.get("thumbnail_src") or item.get("thumbnail") or item.get("img_src") or "").strip() or None
+    )
+    source = str(item.get("engine") or item.get("source") or "").strip() or None
+    snippet = str(item.get("content") or item.get("description") or "").strip() or None
+
+    return StudyReferenceItem(
+        title=title,
+        url=url,
+        source=source,
+        thumbnail_url=thumbnail_url,
+        embed_url=_extract_youtube_embed_url(url),
+        snippet=snippet,
+    )
+
+
+async def _search_searxng(query: str, categories: str) -> list[StudyReferenceItem]:
+    params = {
+        "q": query,
+        "categories": categories,
+        "format": "json",
+        "safesearch": 1,
+    }
+    async with httpx.AsyncClient(timeout=settings.searxng_timeout_seconds) as client:
+        response = await client.get(f"{settings.searxng_base_url}/search", params=params)
+
+    if response.status_code >= 400:
+        raise ValueError(f"SearXNG search failed: {response.status_code} {response.text}")
+
+    payload = response.json()
+    items: list[StudyReferenceItem] = []
+    for raw_item in payload.get("results", []):
+        mapped = _map_reference_item(raw_item)
+        if mapped:
+            items.append(mapped)
+    return items
+
+
+async def get_study_references_service(query: str, limit: int = 6) -> StudyReferenceResponse:
+    from app.core.database import redis_client
+
+    search_query = query.strip()
+    if not search_query:
+        raise ValueError("Query is required")
+
+    cache_key = f"searxng:refs:{search_query}:{limit}"
+    try:
+        cached = await redis_client.get(cache_key)
+        if cached:
+            return StudyReferenceResponse.model_validate_json(cached)
+    except Exception:
+        pass  # Redis unavailable — proceed without cache
+
+    try:
+        video_results, image_results = await asyncio.gather(
+            _search_searxng(search_query, "videos"),
+            _search_searxng(search_query, "images"),
+        )
+    except httpx.TimeoutException as exc:
+        raise ValueError("SearXNG timed out while fetching references") from exc
+    except httpx.RequestError as exc:
+        raise ValueError(f"Unable to reach SearXNG: {exc}") from exc
+
+    result = StudyReferenceResponse(
+        query=search_query,
+        videos=video_results[:limit],
+        images=image_results[:limit],
+    )
+    try:
+        await redis_client.setex(cache_key, 86400, result.model_dump_json())
+    except Exception:
+        pass  # Redis unavailable — skip caching
+
+    return result
 
 
 def _normalize_plan(items: object) -> list[StudyDayPlan]:

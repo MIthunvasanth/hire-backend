@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     rapidapi_key: str | None = Field(default=None, alias="RAPIDAPI_KEY")
     rapidapi_host: str = Field(default="jsearch.p.rapidapi.com", alias="RAPIDAPI_HOST")
     rapidapi_base_url: str = Field(default="https://jsearch.p.rapidapi.com", alias="RAPIDAPI_BASE_URL")
+    searxng_base_url: str = Field(default="http://127.0.0.1:8081", alias="SEARXNG_BASE_URL")
+    searxng_timeout_seconds: float = Field(default=20.0, alias="SEARXNG_TIMEOUT_SECONDS")
 
 
 settings = Settings()

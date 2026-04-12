@@ -56,3 +56,18 @@ class StudyPlanTaskUpdateRequest(BaseModel):
 
 class StudyPlanHistoryResponse(BaseModel):
     plans: list[StudyPlanResponse] = Field(default_factory=list)
+
+
+class StudyReferenceItem(BaseModel):
+    title: str
+    url: str
+    source: str | None = None
+    thumbnail_url: str | None = None
+    embed_url: str | None = None
+    snippet: str | None = None
+
+
+class StudyReferenceResponse(BaseModel):
+    query: str
+    videos: list[StudyReferenceItem] = Field(default_factory=list)
+    images: list[StudyReferenceItem] = Field(default_factory=list)
