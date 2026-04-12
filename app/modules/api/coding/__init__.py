@@ -1,0 +1,1 @@
+# Coding challenge module initialization

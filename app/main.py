@@ -28,6 +28,7 @@ from app.modules.api.recruiter.routes import router as recruiter_router
 from app.modules.api.resume.routes import router as resume_router
 from app.modules.api.scoring.routes import router as scoring_router
 from app.modules.api.user.routes import router as user_router
+from app.modules.api.coding.routes import router as coding_router
 
 if sys.platform.startswith("win"):
 	# Playwright launches a browser subprocess and requires Proactor loop on Windows.
@@ -126,6 +127,7 @@ app.include_router(job_searcher_router)
 app.include_router(resume_parser_router)
 app.include_router(scraper_router)
 app.include_router(study_plan_router)
+app.include_router(coding_router)
 
 
 if __name__ == "__main__":

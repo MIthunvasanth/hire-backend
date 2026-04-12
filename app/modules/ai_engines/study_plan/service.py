@@ -217,7 +217,13 @@ def _normalize_plan(items: object) -> list[StudyDayPlan]:
                 completed=False,
             )
 
-        days.append(StudyDayPlan(day=idx, topic=topic, tasks=tasks, module_test=module_test, overall_test=overall_test))
+        days.append(StudyDayPlan(
+            day=idx,
+            topic=topic,
+            tasks=tasks,
+            module_test=module_test,
+            overall_test=overall_test
+        ))
 
     return days
 
@@ -260,7 +266,7 @@ async def generate_study_plan_service(gap_analysis_id: str, user_id: str | None,
                         "}]}. "
                         "Rules: plan 5-10 days; each day 3-5 tasks; each task 2-4 submodules (concrete actionable sub-steps); "
                         "module_test type 'interview' with 3-5 conceptual questions about the day topic; "
-                        "overall_test type 'coding' with 2-3 hands-on coding challenge prompts; "
+                        "overall_test type 'interview' with 3-5 conceptual questions covering the whole plan; "
                         "all content specific to the provided skill gaps, concise and actionable."
                     ),
                 },
